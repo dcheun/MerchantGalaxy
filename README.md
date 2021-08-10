@@ -1,0 +1,2 @@
+# MerchantGalaxy
+Space Merchant Calculator
