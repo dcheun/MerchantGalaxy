@@ -7,7 +7,11 @@ between intergalactic units and roman numerals.
 
 """
 
+import getopt
+import os
 import re
+import sys
+from textwrap import dedent
 
 __author__ = "Danny Cheun"
 __credits__ = ["Danny Cheun"]
@@ -17,6 +21,9 @@ __email__ = "dcheun@gmail.com"
 
 
 # Globals
+# For holding arguments passed into script.
+script_args = {}
+
 # Maps roman numeral to int.
 roman = {
     'I': 1,
@@ -108,45 +115,76 @@ def print_err_msg():
     print('I have no idea what you are talking about')
 
 
-def process(input):
+def gen_input():
+    """Generator for input line by line."""
+    input = script_args['filename']
+    with open(input, 'r') as f:
+        for line in f:
+            yield line
+
+
+def process():
     """Main processor."""
-    for i in input.splitlines():
+    for i in gen_input():
         line = i.strip()
         if not line:
             continue
+        # Check for line describing each intergalactic unit and corresponding roman numeral value.
         m = re.findall('^([^ ]+) is ([IVXLCDM])$', line)
         if m:
             i_units[m[0][0]] = m[0][1]
             continue
-        
+        # Check for line describing mulipliers.
         m = re.findall('^(.+) is ([0-9]+) Credits$', line, re.IGNORECASE)
         if m:
             process_mult(m)
             continue
-    
+        # Check for line requesting conversion from galactic units to credits.
         m = re.findall('^how .+ is (.+)\?$', line, re.IGNORECASE)
         if m:
             process_credits(m)
             continue
-   
+        # Otherwise unprocessable.
         print_err_msg()
 
 
+def usage():
+    """Print usage info."""
+    program_name = os.path.basename(sys.argv[0])
+    print(f'Usage: {program_name} <options>...')
+    print(dedent('''
+    Required argument(s):
+      -f <FILENAME>, --filename=<FILENAME>
+            The name of the text input file to process.
+    '''))
+
+
+def handle_args():
+    """Handle command line args."""
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'f:',
+                                   ['filename='])
+    except getopt.GetoptError as e:
+        # Print usage info and exit.
+        print(str(e))
+        usage()
+        sys.exit(2)
+    
+    for o, a in opts:
+        if o == '-f' or o == '--filename':
+            script_args['filename'] = a
+        else:
+            assert False, f'Unhandled option {o}'
+    
+    if 'filename' not in script_args:
+        print('ERROR: Missing argument(s)', file=sys.stderr)
+        usage()
+        sys.exit(2)
+
+
 def main():
-    process('''
-    glob is I
-    prok is V
-    pish is X
-    tegj is L
-    glob glob Silver is 34 Credits
-    glob prok Gold is 57800 Credits
-    pish pish Iron is 3910 Credits
-    how much is pish tegj glob glob ?
-    how many Credits is glob prok Silver ?
-    how many Credits is glob prok Gold ?
-    how many Credits is glob prok Iron ?
-    how much wood could a woodchuck chuck if a woodchuck could chuck wood ?
-    ''')
+    handle_args()
+    process()
 
 
 if __name__ == '__main__':
